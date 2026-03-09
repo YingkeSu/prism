@@ -67,15 +67,19 @@ class ImageQualityEstimator(nn.Module):
         )
 
         # Feature extraction network (for encoding images to feature vectors)
+        # Lightweight design with global average pooling
         self.feature_extractor = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.MaxPool2d(2),                   # 128×128 → 64×64
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),                   # 64×64 → 32×32
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.AdaptiveAvgPool2d((1, 1)),      # 32×32 → 1×1
             nn.Flatten(),
-            nn.Linear(64 * (128 // 4) * (128 // 4), 256),
-            nn.ReLU(inplace=True),
-            nn.Linear(256, 256)
+            nn.Linear(64, 256)                 # 64×256 + 256 = 16,640
         )
 
     def forward(self, rgb_image: torch.Tensor) -> Dict[str, torch.Tensor]:
@@ -88,32 +92,38 @@ class ImageQualityEstimator(nn.Module):
         Returns:
             Dict: Quality metrics
         """
+        # Extract 256-dim features first
+        features = self.feature_extractor(rgb_image)
+
         # 1. Convert to grayscale
         gray = 0.299 * rgb_image[:, 0:1, :, :] + \
                 0.587 * rgb_image[:, 1:2, :, :] + \
                 0.114 * rgb_image[:, 2:3, :, :]  # (B, 1, H, W)
 
         # 2. Sharpness (Laplacian operator)
-        sharpness = self._compute_sharpness(gray)  # (B, 1)
+        sharpness = self._compute_sharpness(gray)
 
         # 3. Contrast (local standard deviation)
-        contrast = self._compute_contrast(gray)  # (B, 1)
+        contrast = self._compute_contrast(gray)
 
         # 4. Brightness (histogram analysis)
-        brightness = self._compute_brightness(rgb_image)  # (B, 1)
+        brightness = self._compute_brightness(rgb_image)
 
         # 5. Texture (gradient variance)
-        texture = self._compute_texture(gray)  # (B, 1)
+        texture = self._compute_texture(gray)
 
         # 6. Overall quality score
-        overall_quality = self.quality_fusion(quality_features)  # (B, 1)
+        quality_features = torch.cat([sharpness, contrast, brightness, texture], dim=1)
+        overall_quality = self.quality_fusion(quality_features)
 
         return {
             'sharpness': sharpness,
             'contrast': contrast,
             'brightness': brightness,
             'texture': texture,
-            'overall_quality': overall_quality
+            'quality_features': quality_features,
+            'overall_quality': overall_quality,
+            'features': features
         }
 
     def _compute_sharpness(self, gray_image: torch.Tensor) -> torch.Tensor:
@@ -140,7 +150,7 @@ class ImageQualityEstimator(nn.Module):
 
     def _compute_contrast(self, gray_image: torch.Tensor) -> torch.Tensor:
         """
-        Compute contrast using local standard deviation
+        Compute global contrast using efficient standard deviation
 
         Args:
             gray_image: (B, 1, H, W)
@@ -148,22 +158,10 @@ class ImageQualityEstimator(nn.Module):
         Returns:
             contrast: (B, 1) [0, 1]
         """
-        # Use 7x7 local window
-        kernel_size = 7
-        padding = kernel_size // 2
-
-        # Pad boundaries
-        padded = F.pad(gray_image, (padding, padding, padding, padding), mode='reflect')
-
-        # Sliding window compute standard deviation
-        patches = padded.unfold(2, kernel_size, 1).unfold(3, kernel_size, 1)
-        # patches: (B, 1, H', W', 7, 7)
-
-        local_std = patches.std(dim=(-2, -1))  # (B, 1, H', W')
-
-        # Global contrast
-        contrast = local_std.mean(dim=[2, 3], keepdim=True)  # (B, 1, 1, 1)
-        contrast = contrast.squeeze(-1).squeeze(-1)  # (B, 1)
+        # Use global std instead of local window - much faster
+        # For reliability estimation, global contrast is sufficient
+        global_std = gray_image.std(dim=[2, 3], keepdim=True)  # (B, 1, 1, 1)
+        contrast = global_std.squeeze(-1).squeeze(-1)  # (B, 1)
 
         # Normalize to [0, 1]
         contrast = torch.sigmoid(contrast * 0.5)

@@ -44,7 +44,7 @@ class Simple2DObstacleEnv(gym.Env):
     def reset(self, seed=None, options=None) -> Tuple[np.ndarray, Dict[str, Any]]:
         super().reset(seed=seed)
 
-        self.state = np.array([0.0, 0.0, 0.0], dtype=np.float32)
+        self.state = np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float32)
         self.step_count = 0
 
         self.obstacles = []

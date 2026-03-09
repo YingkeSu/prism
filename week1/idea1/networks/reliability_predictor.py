@@ -22,6 +22,7 @@ class ReliabilityPredictor(nn.Module):
         lidar_dim: LiDAR feature dimension (default 64)
         rgb_dim: RGB feature dimension (default 256)
         imu_dim: IMU feature dimension (default 64)
+        imu_window_size: IMU temporal window used by consistency checker (default 16)
         hidden_dim: Hidden layer dimension (default 128)
         output_dim: Output feature dimension (default 256)
 
@@ -44,6 +45,7 @@ class ReliabilityPredictor(nn.Module):
         lidar_dim: int = 64,
         rgb_dim: int = 256,
         imu_dim: int = 64,
+        imu_window_size: int = 16,
         hidden_dim: int = 128,
         output_dim: int = 256
     ):
@@ -52,64 +54,38 @@ class ReliabilityPredictor(nn.Module):
         # 3 reliability estimators
         self.lidar_estimator = LiDARSNREstimator(point_dim=3, feature_dim=lidar_dim)
         self.rgb_estimator = ImageQualityEstimator(input_channels=3)
-        self.imu_estimator = IMUConsistencyChecker(imu_dim=6, feature_dim=imu_dim)
+        self.imu_estimator = IMUConsistencyChecker(
+            imu_dim=6,
+            window_size=max(1, int(imu_window_size)),
+            feature_dim=imu_dim
+        )
 
-        # Encoders
+        # Encoders - simplified 2-layer design to reduce parameters
         self.lidar_encoder = nn.Sequential(
-            nn.Linear(lidar_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(hidden_dim, hidden_dim // 2)
+            nn.Linear(lidar_dim, hidden_dim // 2),
+            nn.ReLU(inplace=True)
         )
 
         self.rgb_encoder = nn.Sequential(
-            nn.Linear(rgb_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(hidden_dim, hidden_dim // 2)
+            nn.Linear(rgb_dim, hidden_dim // 2),
+            nn.ReLU(inplace=True)
         )
 
         self.imu_encoder = nn.Sequential(
             nn.Linear(imu_dim, hidden_dim // 2),
-            nn.LayerNorm(hidden_dim // 2),
             nn.ReLU(inplace=True)
         )
 
-        # Feature fusion
+        # Feature fusion - simplified
         self.feature_fusion = nn.Sequential(
             nn.Linear(hidden_dim // 2 + hidden_dim // 2 + hidden_dim // 2, output_dim),
-            nn.LayerNorm(output_dim),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(output_dim, output_dim)
+            nn.ReLU(inplace=True)
         )
 
-        # Reliability score prediction heads
-        self.lidar_reliability = nn.Sequential(
-            nn.Linear(output_dim, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
-
-        self.rgb_reliability = nn.Sequential(
-            nn.Linear(output_dim, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
-
-        self.imu_reliability = nn.Sequential(
-            nn.Linear(output_dim, 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(128, 1),
-            nn.Sigmoid()
-        )
+        # Reliability score prediction heads - simplified
+        self.lidar_reliability = nn.Linear(output_dim, 1)
+        self.rgb_reliability = nn.Linear(output_dim, 1)
+        self.imu_reliability = nn.Linear(output_dim, 1)
 
     def forward(
         self,
@@ -139,18 +115,18 @@ class ReliabilityPredictor(nn.Module):
         imu_consistency = imu_output['consistency']  # (B, 1)
 
         # 3. Encode modality features (use raw features from estimators)
-        lidar_feat = self.lidar_encoder(lidar_output['features'])  # (B, hidden_dim//2)
-        rgb_feat = self.rgb_encoder(rgb_output['quality_features'])  # (B, hidden_dim//2)
-        imu_feat = self.imu_encoder(imu_output['features'])  # (B, hidden_dim//2)
+        lidar_feat = self.lidar_encoder(lidar_output['features'])
+        rgb_feat = self.rgb_encoder(rgb_output['features'])
+        imu_feat = self.imu_encoder(imu_output['features'])
 
         # 4. Fuse features
         fused = torch.cat([lidar_feat, rgb_feat, imu_feat], dim=1)
         features = self.feature_fusion(fused)  # (B, output_dim)
 
-        # 5. Predict reliability scores
-        r_lidar = self.lidar_reliability(features)  # (B, 1)
-        r_rgb = self.rgb_reliability(features)  # (B, 1)
-        r_imu = self.imu_reliability(features)  # (B, 1)
+        # 5. Predict reliability scores with sigmoid activation
+        r_lidar = torch.sigmoid(self.lidar_reliability(features))  # (B, 1)
+        r_rgb = torch.sigmoid(self.rgb_reliability(features))  # (B, 1)
+        r_imu = torch.sigmoid(self.imu_reliability(features))  # (B, 1)
 
         return {
             'r_lidar': r_lidar,

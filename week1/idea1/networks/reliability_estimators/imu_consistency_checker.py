@@ -9,7 +9,6 @@ Checks IMU data quality:
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from typing import Dict
 
 
@@ -24,8 +23,8 @@ class IMUConsistencyChecker(nn.Module):
 
     Args:
         imu_dim: IMU data dimension (default 6: acc_x, acc_y, acc_z, gyro_x, gyro_y, gyro_z)
-        window_size: Sliding window size (default 100)
-        feature_dim: Feature dimension (default 64)
+        window_size: Sliding window size (default 16)
+        feature_dim: Feature dimension (default 128)
 
     Input:
         imu_sequence: (B, T, 6) IMU sequence
@@ -42,57 +41,43 @@ class IMUConsistencyChecker(nn.Module):
         }
     """
 
-    def __init__(self, imu_dim: int = 6, window_size: int = 100, feature_dim: int = 128):
+    def __init__(self, imu_dim: int = 6, window_size: int = 16, feature_dim: int = 128):
         super().__init__()
         self.imu_dim = imu_dim
         self.window_size = window_size
         self.feature_dim = feature_dim
 
-        # Drift analyzer (using 1D CNN for time series)
-        self.drift_analyzer = nn.Sequential(
-            nn.Conv1d(imu_dim, 64, kernel_size=3, padding=1),
-            nn.BatchNorm1d(64),
+        # Shared temporal encoder for drift/anomaly/features.
+        # This avoids duplicating heavy Conv1d stacks and removes the LSTM bottleneck.
+        self.temporal_encoder = nn.Sequential(
+            nn.Conv1d(imu_dim, 48, kernel_size=3, padding=1),
+            nn.BatchNorm1d(48),
             nn.ReLU(inplace=True),
             nn.MaxPool1d(2),
-            nn.Conv1d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm1d(128),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool1d(1)
-        )
-
-        # Velocity anomaly detector
-        self.velocity_anomaly_detector = nn.Sequential(
-            nn.Conv1d(imu_dim, 64, kernel_size=3, padding=1),
-            nn.BatchNorm1d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool1d(2),
-            nn.Conv1d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm1d(128),
+            nn.Conv1d(48, 96, kernel_size=3, padding=1),
+            nn.BatchNorm1d(96),
             nn.ReLU(inplace=True),
             nn.AdaptiveAvgPool1d(1)
         )
 
         # Drift prediction head
         self.drift_head = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(96, 32),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(64, 1),
+            nn.Linear(32, 1),
             nn.Sigmoid()
         )
 
         # Velocity anomaly prediction head
         self.anomaly_head = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(96, 32),
             nn.ReLU(inplace=True),
-            nn.Dropout(0.1),
-            nn.Linear(64, 1),
+            nn.Linear(32, 1),
             nn.Sigmoid()
         )
 
-        # Time series feature extraction (LSTM)
-        self.lstm = nn.LSTM(imu_dim, 64, batch_first=True, bidirectional=True)
-        self.lstm_fc = nn.Linear(128, feature_dim)
+        # Feature projection used by reliability predictor.
+        self.feature_head = nn.Linear(96, feature_dim)
 
     def forward(self, imu_sequence: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -111,28 +96,19 @@ class IMUConsistencyChecker(nn.Module):
 
         # Pad/truncate to window_size
         if T < self.window_size:
-            padding = torch.zeros(B, 6, self.window_size - T)
+            # Keep padding on the same device/dtype as input for CUDA safety.
+            padding = x.new_zeros((B, self.imu_dim, self.window_size - T))
             x = torch.cat([padding, x], dim=2)
         else:
             x = x[:, :, -self.window_size:]
 
-        # Analyze drift
-        drift_features = self.drift_analyzer(x)  # (B, 128, 1) -> (B, 128, 1) -> (B, 128)
-        drift_features = drift_features.squeeze(-1)  # (B, 128)
-        drift_score = self.drift_head(drift_features)  # (B, 1)
+        # Shared temporal features
+        temporal_features = self.temporal_encoder(x).squeeze(-1)  # (B, 96)
 
-        # Analyze velocity anomaly
-        anomaly_features = self.velocity_anomaly_detector(x)  # (B, 128, 1) -> (B, 128, 1) -> (B, 128)
-        anomaly_features = anomaly_features.squeeze(-1)  # (B, 128)
-        velocity_anomaly = self.anomaly_head(anomaly_features)  # (B, 1)
-
-        # Time series feature extraction (LSTM)
-        lstm_out, (h_n, c_n) = self.lstm(imu_sequence)
-        # lstm_out: (B, T, 128)
-
-        # Use last timestep features
-        lstm_features = lstm_out[:, -1, :]  # (B, 128)
-        features = self.lstm_fc(lstm_features)  # (B, feature_dim)
+        # Predict consistency factors
+        drift_score = self.drift_head(temporal_features)  # (B, 1)
+        velocity_anomaly = self.anomaly_head(temporal_features)  # (B, 1)
+        features = self.feature_head(temporal_features)  # (B, feature_dim)
 
         # Compute consistency: 1 - drift - anomaly
         consistency = 1.0 - 0.5 * drift_score - 0.5 * velocity_anomaly
