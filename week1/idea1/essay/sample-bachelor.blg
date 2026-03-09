@@ -1,0 +1,65 @@
+This is BibTeX, Version 0.99d (TeX Live 2025)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: sample-bachelor.aux
+A level-1 auxiliary file: data/com_info.aux
+A level-1 auxiliary file: data/bachelor/bachelor_info.aux
+A level-1 auxiliary file: data/bachelor/assign.aux
+A level-1 auxiliary file: data/abstract.aux
+A level-1 auxiliary file: data/chapter1-intro.aux
+A level-1 auxiliary file: data/chapter2-config.aux
+A level-1 auxiliary file: data/chapter3-download.aux
+A level-1 auxiliary file: data/chapter4-basic.aux
+A level-1 auxiliary file: data/chapter5-usage.aux
+A level-1 auxiliary file: data/chapter6-implement.aux
+A level-1 auxiliary file: data/chapter7-conclusion.aux
+A level-1 auxiliary file: data/bachelor/acknowledgement.aux
+A level-1 auxiliary file: data/reference.aux
+The style file: style/gbt7714-numerical.bst
+A level-1 auxiliary file: data/appendix1-faq.aux
+A level-1 auxiliary file: data/appendix2-contactus.aux
+A level-1 auxiliary file: data/appendix3-progress-report.aux
+A level-1 auxiliary file: data/appendix4-final-report-student.aux
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
+Database file #1: bibs.bib
+You've used 15 entries,
+            4267 wiz_defined-function locations,
+            979 strings with 10169 characters,
+and the built_in function-call counts, 102954 in all, are:
+= -- 1795
+> -- 12331
+< -- 15076
++ -- 4099
+- -- 923
+* -- 498
+:= -- 14216
+add.period$ -- 59
+call.type$ -- 15
+change.case$ -- 32
+chr.to.int$ -- 3738
+cite$ -- 15
+duplicate$ -- 303
+empty$ -- 856
+format.name$ -- 254
+if$ -- 26817
+int.to.chr$ -- 1
+int.to.str$ -- 16
+missing$ -- 0
+newline$ -- 103
+num.names$ -- 45
+pop$ -- 5332
+preamble$ -- 1
+purify$ -- 15
+quote$ -- 0
+skip$ -- 10889
+stack$ -- 0
+substring$ -- 4705
+swap$ -- 48
+text.length$ -- 181
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 169
+warning$ -- 0
+while$ -- 211
+width$ -- 0
+write$ -- 211

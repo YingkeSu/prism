@@ -1,0 +1,153 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{核心方法、关键算法与理论推导}
+\label{chapter-method}
+
+\section{范围声明与实现边界}
+本章同时包含\textbf{工程实现可复现的算法描述}与\textbf{用于解释设计动机的理论推导}。为避免过度宣称，本文明确区分如下两类内容：
+\begin{itemize}
+    \item \textbf{实现事实（Implemented）}：可靠性估计器、可靠性预测网络、注意力权重分配（含温度与偏置）、可靠性调制归一化与融合模块均已在仓库代码中实现，并被集成为Stable-Baselines3特征提取器。
+    \item \textbf{理论动机（Sketch under assumptions）}：关于收敛性（如李雅普诺夫意义）与最坏情况鲁棒性（如$H_\infty$相关表述）属于在强假设下的推导草图，用于解释"为何可靠性感知加权可能更稳健"，并不构成对当前实现与训练流程的严格保证。
+\end{itemize}
+
+\section{问题形式化与目标}
+给定多模态观测$o_t=\{o_t^L,o_t^R,o_t^I\}$，本文希望学习融合映射
+\begin{equation}
+    f_\text{fusion}: \mathcal{O}^L\times\mathcal{O}^R\times\mathcal{O}^I \rightarrow \mathbb{R}^{d}
+\end{equation}
+使得在模态退化场景（噪声、缺失、失效）下，融合特征对扰动不敏感，并能支持强化学习策略稳定收敛。
+
+\section{可靠性估计器设计与理论推导}
+本文为三种模态分别设计可靠性估计器，目标是输出\textbf{可解释的质量度量}与\textbf{可学习的特征表征}，供后续可靠性预测与融合使用。
+
+\subsection{LiDAR信噪比估计（密度-均匀性融合）}
+设点云$P=\{p_i\}_{i=1}^{N}$，其中$p_i\in\mathbb{R}^3$。定义点云密度为
+\begin{equation}
+    \rho(P)=\frac{N}{N_{\max}}\in[0,1]
+\end{equation}
+其中$N_{\max}$为最大点数（实现中默认$1000$）。定义点云中心
+\begin{equation}
+    \mu_P=\frac{1}{N}\sum_{i=1}^{N} p_i
+\end{equation}
+并令$d_i=\lVert p_i-\mu_P\rVert_2$，其标准差为$\sigma_d$。用指数函数构造均匀性度量
+\begin{equation}
+    \mathcal{U}(P)=\exp\left(-\frac{\sigma_d}{\lambda_U}\right)
+\end{equation}
+其中$\lambda_U>0$为尺度参数。最终给出综合SNR度量
+\begin{equation}
+    \mathrm{SNR}(P)=\alpha\,\rho(P)+(1-\alpha)\,\mathcal{U}(P)
+\end{equation}
+
+\textbf{性质1（有界性）}：由于$\rho(P)\in[0,1]$且$\mathcal{U}(P)\in(0,1]$，当$\alpha\in[0,1]$时有$\mathrm{SNR}(P)\in[0,1]$。
+
+\textbf{性质2（单调性）}：$\rho(P)$关于点数$N$单调递增，$\mathcal{U}(P)$关于$\sigma_d$单调递减；因此该SNR度量能够反映"点云更密集且更均匀$\Rightarrow$质量更高"的直观规律。
+
+\textbf{实际实现说明}：上述传统度量公式在代码中实现为\texttt{compute\_traditional\_metrics()}辅助方法，主要用于质量评估的理论参考与验证。实际的前向传播采用轻量级卷积神经网络（Conv1d+MLP）对点云进行特征提取，并通过独立的预测头输出信噪比、密度与均匀性分数。该数据驱动方法能够在端到端训练中自动学习与下游任务相关的质量判别准则，同时保留传统度量的可解释性。
+
+\subsection{RGB图像质量评估（多维质量指标）}
+对RGB图像$I\in\mathbb{R}^{H\times W\times 3}$，首先进行灰度转换
+\begin{equation}
+    I_{\text{gray}}=0.299 I_R + 0.587 I_G + 0.114 I_B
+\end{equation}
+并采用Laplacian算子$\nabla^2$计算锐利度指标
+\begin{equation}
+    \mathcal{S}(I)=\mathrm{Var}(\nabla^2 I_{\text{gray}})
+\end{equation}
+对比度可由局部窗口标准差统计得到（实现中为$7\times 7$窗口平均）。亮度质量以平均亮度与理想亮度的偏差度量，纹理复杂度可由梯度方差统计得到。最终将四个维度的质量指标作为输入，经轻量MLP得到整体质量评分$\mathcal{Q}(I)\in[0,1]$。
+
+\subsection{IMU一致性检查（漂移与异常）}
+对IMU序列$X=\{x_t\}_{t=1}^{T}$，其中$x_t\in\mathbb{R}^{6}$（加速度计与陀螺仪），通过时序建模与异常检测输出漂移分数与异常分数，并构造一致性分数
+\begin{equation}
+    \mathcal{C}_{\text{IMU}}(X)=1-0.5\,D_{\text{drift}}(X)-0.5\,D_{\text{anom}}(X)
+\end{equation}
+其中$D_{\text{drift}},D_{\text{anom}}\in[0,1]$。因此$\mathcal{C}_{\text{IMU}}(X)\in[0,1]$，并具有"漂移/异常越严重一致性越低"的语义。
+
+\textbf{实际实现说明}：与传统LiDAR估计器类似，上述一致性计算公式在代码中作为\texttt{compute\_traditional\_metrics()}辅助方法提供。当前工程实现采用共享时序CNN编码器（Conv1d+Pooling）与轻量预测头联合输出漂移分数、异常分数及IMU特征，移除了早期版本中的LSTM分支以降低训练开销并提升吞吐率。该实现仍保留一致性分数的可解释语义。
+
+\section{可靠性预测网络（共享表征）}
+可靠性预测网络输入为三模态估计器输出的特征与质量指标，输出为
+\begin{equation}
+    \{r_{L}, r_{R}, r_{I}, \mathbf{f}\}=\mathrm{Predictor}(o^L, o^R, o^I)
+\end{equation}
+其中$r_m\in[0,1]$表示模态$m$的可靠性分数，$\mathbf{f}\in\mathbb{R}^{d}$为共享融合特征表征（实现中默认$d=256$）。共享表征的作用是减少重复编码，并为后续动态权重分配提供统一的特征空间。
+
+\section{动态权重分配的理论推导}
+为实现对模态贡献的自适应调整，本文采用注意力机制（Attention）\cite{vaswani2017attention}对模态特征进行交互，并通过softmax输出融合权重。设三个模态特征为$\{f^L,f^R,f^I\}$，堆叠为
+\begin{equation}
+    F = \mathrm{stack}(f^L,f^R,f^I)\in\mathbb{R}^{3 \times d}
+\end{equation}
+实现中使用自注意力（$Q=K=V=F$）得到注意力矩阵$A\in\mathbb{R}^{3\times 3}$。将第$i$个模态作为query时，其对所有key的注意力权重为$A_{ij}$。为了得到每个模态的单一得分，本文在工程实现中对其一行做平均得到
+\begin{equation}
+    s_i = \frac{1}{3}\sum_{j=1}^{3} A_{ij},\quad i\in\{L,R,I\}
+\end{equation}
+随后对得分做温度缩放并叠加可学习偏置项，最终计算融合权重
+\begin{equation}
+    \mathbf{w}=\mathrm{softmax}\left(\frac{\mathbf{s}}{\tau}+\mathbf{b}\right),\quad \mathbf{w}=[w_L,w_R,w_I]^\top
+\end{equation}
+其中$\mathbf{b}=[b_L,b_R,b_I]^\top$为偏置。实现中温度参数采用可学习标量并经sigmoid约束到$(0,1)$：
+\begin{equation}
+    \tau = \sigma(\theta)\in(0,1)
+\end{equation}
+由softmax性质可得
+\begin{equation}
+    \sum_{m\in\{L,R,I\}} w_m = 1,\quad w_m\ge 0
+\end{equation}
+
+\subsection{温度缩放的极限分析}
+当$\tau\rightarrow 0$时，softmax趋向于one-hot选择，即权重会集中到打分最大的模态；当$\tau$增大时，权重分布更平滑并趋向均匀分配。由于实现中采用$\tau=\sigma(\theta)$将温度限制在$(0,1)$，因此其作用更偏向"控制选择的激进程度"（越小越尖锐）。
+
+温度对权重的影响可由梯度直观刻画。令$\bar{s}=\sum_k w_k s_k$，则有
+\begin{equation}
+    \frac{\partial w_i}{\partial \tau}=\frac{w_i}{\tau^2}(\bar{s}-s_i)
+\end{equation}
+当某模态得分$s_i$显著高于平均得分$\bar{s}$时，减小$\tau$将进一步提高其权重，体现出"可靠模态占优"的自增强效果。
+
+\section{特征归一化与可靠性调制}
+不同模态特征在尺度与分布上可能差异较大，且在质量退化时可能引入异常幅值。当前仓库实现的归一化层采用逐模态L2归一化并引入可学习缩放/偏置：
+\begin{equation}
+    \hat{f}^m = \frac{f^m-\beta_m}{\lVert f^m-\beta_m\rVert_2+\epsilon},\quad \tilde{f}^m=\gamma_m\hat{f}^m
+\end{equation}
+其中$\gamma_m,\beta_m$为可学习参数。
+
+\textbf{实现说明}：当前代码已实现可靠性调制版本，其核心形式为
+\begin{equation}
+    \gamma_m^{\text{eff}}=\gamma_m\cdot(1+\lambda_m r_m),\quad \tilde{f}^m=\gamma_m^{\text{eff}}\hat{f}^m
+\end{equation}
+其中$\lambda_m$为可学习参数，$r_m\in[0,1]$为模态可靠性分数。工程实现同时保留\texttt{use\_reliability\_modulation=False}的开关作为消融分支，以便直接比较“有/无可靠性调制归一化”的性能差异。
+
+\section{端到端融合与损失函数}
+融合模块在特征级完成加权与拼接：
+\begin{equation}
+    z = \mathrm{concat}(w_L\tilde{f}^L,\;w_R\tilde{f}^R,\;w_I\tilde{f}^I)
+\end{equation}
+并通过轻量MLP得到输出表示$\phi(z)$。在模块级自测中，仓库实现提供一个均方误差主损失与可靠性方差正则（鼓励各模态可靠性不过度塌缩到单一模态）：
+\begin{equation}
+    \mathcal{L} = \mathcal{L}_{\text{mse}} + \lambda_{\text{rel}}\,\mathrm{Var}(r_L,r_R,r_I)
+\end{equation}
+
+\section{与强化学习的联合优化（SAC）}
+本文采用SAC算法\cite{haarnoja2018sac}进行策略学习。融合模块输出的特征作为策略网络与价值网络的输入，从而实现端到端训练。训练实现基于Stable-Baselines3\cite{raffin2021sb3}，环境接口来自Gymnasium\cite{gymnasium2023}。
+
+\section{理论分析补充：鲁棒性与信息论（基于假设的推导）}
+为提升论文的理论完整性，本节给出与项目设计一致的若干推导与结论（在一定假设下成立）。需要强调的是：
+\begin{itemize}
+    \item 当前仓库实现已经包含：可靠性估计器、注意力权重分配（带温度与偏置）、以及可靠性调制的逐模态归一化层。
+    \item 本节中关于"收敛性（李雅普诺夫意义）"与"$H_\infty$鲁棒性"的讨论属于\textbf{理论动机/可能的研究扩展}，并不等价于对当前实现与训练流程的严格保证。相关控制理论背景可参考\cite{khalil2002nonlinear,zhou1996hinf}。
+\end{itemize}
+
+\subsection{最坏情况鲁棒性直观分析}
+考虑极端退化：某一模态完全失效时，其可靠性应趋近于0；若权重分配机制能够令对应权重趋近于0，则融合输出将主要由剩余模态决定，从而避免将失效模态噪声注入策略输入。与固定权重$\mathbf{w}=(1/3,1/3,1/3)$相比，该机制在最坏情形下具有更小的加权误差。
+
+\subsection{互信息视角的融合动机}
+从信息论角度，融合目标可理解为最大化融合特征$Z$与任务变量$Y$之间的互信息$\mathcal{I}(Z;Y)$\cite{cover2006information}。若做如下假设：
+\begin{equation}
+    r_m \propto \mathcal{I}(Z_m;Y)
+\end{equation}
+即"可靠性越高的模态包含越多与任务相关的信息"，则令权重$w_m$随$r_m$单调增加（例如通过softmax）可在一定条件下提升加权信息量的下界。一个直观推导如下：令$I_m=\mathcal{I}(Z_m;Y)$，固定权重下有$\frac{1}{3}\sum_m I_m$；而若取$w_m\propto I_m$，则加权信息为$\sum_m w_m I_m=\frac{\sum_m I_m^2}{\sum_k I_k}$。由于$x^2$为凸函数，可由Jensen不等式推出$\frac{\sum_m I_m^2}{\sum_k I_k}\ge \frac{1}{3}\sum_m I_m$。
+
+\section{与SB3特征提取器的接口约束}
+为了兼容Stable-Baselines3的MultiInputPolicy，特征提取器需满足：
+\begin{itemize}
+    \item 输入为字典观测（包含lidar/rgb/imu键）；
+    \item 输出为固定维度特征向量（默认$256$维）；
+    \item 支持"可靠性融合模式"与"基线拼接模式"切换，以便消融对比。
+\end{itemize}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/code-yeongyu/oh-my-opencode/master/assets/oh-my-opencode.schema.json",
+
+  "agents": {
+    "Sisyphus": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "oracle": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "librarian": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "explore": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "multimodal-looker": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "Prometheus (Planner)": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "Metis (Plan Consultant)": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "Momus (Plan Reviewer)": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "Atlas": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "Sisyphus-Junior": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "OpenCode-Builder": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "build": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    },
+    "plan": {
+      "model": "zhipuai-coding-plan/glm-4.7"
+    }
+  }
+}

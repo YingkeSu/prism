@@ -1,0 +1,136 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{实验设计与评估}
+
+\section{实验目标}
+实验围绕以下三个问题展开：
+\begin{itemize}
+    \item \textbf{有效性}：可靠性感知融合相较固定权重与无可靠性基线是否带来性能收益；
+    \item \textbf{鲁棒性}：在传感器退化条件下，是否能降低碰撞等失效行为；
+    \item \textbf{工程可用性}：训练与推理开销是否可接受，是否具备可复现实验流程。
+\end{itemize}
+
+\section{实验设置}
+\subsection{算法与实现}
+本文采用SAC\cite{haarnoja2018sac}作为强化学习算法，基于Stable-Baselines3\cite{raffin2021sb3}的\texttt{MultiInputPolicy}。融合模块封装为自定义\texttt{BaseFeaturesExtractor}，并支持以下可控开关：
+\begin{itemize}
+    \item 可靠性融合开关（\texttt{--no-reliability}）；
+    \item 可靠性调制归一化开关（\texttt{--no-reliability-modulation}）；
+    \item 固定权重融合（\texttt{fixed\_weights}）；
+    \item 共享/非共享特征提取器（\texttt{share\_features\_extractor}）。
+\end{itemize}
+
+\subsection{环境与退化注入}
+环境为三模态UAV仿真环境（LiDAR/RGB/IMU），支持显式退化注入：
+\begin{enumerate}
+    \item LiDAR：点云随机丢失与高斯噪声；
+    \item RGB：模糊、噪声与随机遮挡；
+    \item IMU：噪声、漂移与随机通道丢失。
+\end{enumerate}
+同时支持\texttt{easy/medium/hard}三档任务难度，用于避免“所有方法成功率均接近100\%”导致的区分度不足。
+
+\subsection{可复现实验脚本}
+本文实验采用统一脚本：
+\begin{itemize}
+    \item 主训练入口：\texttt{train.py}
+    \item 套件对比入口：\texttt{experiments/run\_suite.py}
+    \item 基线脚本：\texttt{experiments/baseline\_fixed\_weight.py}、\texttt{experiments/ablation\_no\_reliability.py}
+\end{itemize}
+主要结果文件保存在\texttt{logs/experiments/*/suite\_summary.csv}。
+
+\section{评价指标}
+本文报告以下指标：
+\begin{itemize}
+    \item 成功率（Success Rate）
+    \item 碰撞率（Collision Rate）
+    \item 超时率（Time-limit Rate）
+    \item 平均步数（Avg Steps）
+    \item 平均回报（Avg Reward）
+    \item 平均推理时延（Inference ms Mean）
+    \item 训练耗时（Training Seconds）
+\end{itemize}
+
+这些指标由统一评估函数自动统计，终止原因通过环境\texttt{info['termination\_reason']}区分成功/碰撞/越界/超时。
+
+\section{对比方法}
+本文比较四种方法：
+\begin{enumerate}
+    \item \textbf{ours\_dynamic}：可靠性估计 + 动态权重 + 可靠性调制归一化（本文方法）；
+    \item \textbf{no\_reliability}：禁用可靠性融合，采用直接拼接基线；
+    \item \textbf{fixed\_equal}：可靠性分支保留，但融合权重固定为$(1/3,1/3,1/3)$；
+    \item \textbf{no\_norm\_modulation}：关闭可靠性调制归一化，仅保留常规归一化。
+\end{enumerate}
+
+\section{结果与分析（当前可复现结果）}
+\subsection{中等难度结果（single seed，degradation=0.5）}
+表\ref{tab-main-results-easy}对应\texttt{suite\_iter\_v1}（seed=42）。
+
+\begin{table}[h!]
+    \centering
+    \caption{中等难度结果（degradation=0.5，seed=42）}
+    \label{tab-main-results-easy}
+    \begin{tabular}{lccccccc}
+        \toprule
+        方法 & 训练(s) & 成功率(\%) & 碰撞率(\%) & 超时率(\%) & 平均步数 & 平均回报 & 推理(ms) \\
+        \midrule
+        ours\_dynamic & 30.15 & 100.0 & 0.0 & 0.0 & 137.00 & 920.65 & 3.34 \\
+        no\_reliability & 10.73 & 100.0 & 0.0 & 0.0 & 73.00 & 801.13 & 0.95 \\
+        fixed\_equal & 30.16 & 100.0 & 0.0 & 0.0 & 91.00 & 838.43 & 3.31 \\
+        no\_norm\_modulation & 30.32 & 100.0 & 0.0 & 0.0 & 151.00 & 943.92 & 3.36 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{困难难度结果（single seed，degradation=0.5）}
+表\ref{tab-main-results-hard}对应\texttt{suite\_iter\_hard\_v1}（seed=42）。
+
+\begin{table}[h!]
+    \centering
+    \caption{困难难度结果（degradation=0.5，seed=42）}
+    \label{tab-main-results-hard}
+    \begin{tabular}{lccccccc}
+        \toprule
+        方法 & 训练(s) & 成功率(\%) & 碰撞率(\%) & 超时率(\%) & 平均步数 & 平均回报 & 推理(ms) \\
+        \midrule
+        ours\_dynamic & 30.73 & 0.0 & 5.0 & 95.0 & 196.15 & 585.90 & 3.42 \\
+        no\_reliability & 10.43 & 0.0 & 30.0 & 70.0 & 177.80 & 466.26 & 0.89 \\
+        fixed\_equal & 31.25 & 0.0 & 15.0 & 85.0 & 187.55 & 608.29 & 3.26 \\
+        no\_norm\_modulation & 30.68 & 0.0 & 5.0 & 95.0 & 195.65 & 607.20 & 3.52 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{困难难度三随机种子汇总（timesteps=1000）}
+进一步使用\texttt{seeds=42,43,44}重复实验，并对每个方法做均值$\pm$标准差汇总（来自\texttt{suite\_iter\_hard\_ms1}）。
+
+\begin{table}[h!]
+    \centering
+    \caption{困难难度三随机种子汇总（degradation=0.5）}
+    \label{tab-main-results-hard-multiseed}
+    \begin{tabular}{lcccc}
+        \toprule
+        方法 & 训练耗时(s) & 碰撞率 & 超时率 & 平均回报 \\
+        \midrule
+        ours\_dynamic & $39.98 \pm 3.03$ & $0.100 \pm 0.108$ & $0.900 \pm 0.108$ & $592.43 \pm 71.22$ \\
+        no\_reliability & $15.72 \pm 0.94$ & $0.233 \pm 0.062$ & $0.767 \pm 0.062$ & $554.50 \pm 71.32$ \\
+        fixed\_equal & $40.59 \pm 5.89$ & $0.117 \pm 0.047$ & $0.883 \pm 0.047$ & $620.37 \pm 12.93$ \\
+        no\_norm\_modulation & $41.61 \pm 5.32$ & $0.117 \pm 0.094$ & $0.883 \pm 0.094$ & $597.39 \pm 81.74$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{结果讨论}
+\begin{itemize}
+    \item 在中等难度下，各方法成功率均为100\%，说明该设置区分度有限，但本文方法相对无可靠性基线有更高回报。
+    \item 在困难难度下（\texttt{max\_steps=200}），各方法成功率均为0，主要失败类型是“超时未到达目标”，说明当前训练步数与回合时间预算共同限制了成功率上限。
+    \item 即使在该苛刻设置下，多随机种子统计显示无可靠性基线碰撞率最高（$0.233\pm0.062$），而本文方法为$0.100\pm0.108$，说明显式可靠性感知仍有助于降低高风险碰撞失效。
+    \item 可靠性分支方法推理耗时约3.3ms，仍满足实时性目标（<30ms）；无可靠性基线更快（约0.9ms），但鲁棒性较弱。
+    \item 归一化调制消融（no\_norm\_modulation）与本文方法在困难场景碰撞率接近，表明当前调制机制仍有进一步调参空间。
+\end{itemize}
+
+\section{当前局限与后续迭代}
+\begin{itemize}
+    \item 当前结果仍以单随机种子为主，统计显著性不足；
+    \item 训练步数以1k级别为主，尚未覆盖10k\textasciitilde100k长时训练稳定性；
+    \item 与外部代表性融合基线（非本仓库实现）对比仍待补齐。
+\end{itemize}
+下一步将重点开展多随机种子实验（至少3个种子）与更长训练步数的系统评测，并报告均值与方差。

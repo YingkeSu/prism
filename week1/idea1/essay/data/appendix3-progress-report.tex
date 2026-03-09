@@ -1,0 +1,153 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{项目进展报告（导师审阅）}
+\label{appendix-progress-report}
+
+\section{报告说明}
+本报告用于汇总Idea1项目截至\textbf{2026年3月5日}的阶段性进展，重点向导师说明：
+\begin{itemize}
+    \item 当前已完成内容与可复现实验能力；
+    \item 已识别问题及其成因；
+    \item 下一阶段计划与资源需求。
+\end{itemize}
+
+\section{项目定位与目标}
+项目目标是构建面向UAV导航的三模态（LiDAR/RGB/IMU）可靠性感知融合框架，并在传感器退化条件下提升策略鲁棒性。阶段验收标准包括：
+\begin{enumerate}
+    \item 可靠性估计、动态权重、归一化调制、RL集成全部可运行；
+    \item 对比/消融实验链路可复现；
+    \item 具备多随机种子统计能力（均值$\pm$方差）。
+\end{enumerate}
+
+\section{当前完成情况}
+\subsection{方法与工程实现}
+已完成以下模块并通过联调：
+\begin{itemize}
+    \item 可靠性估计器（LiDAR SNR、RGB质量、IMU一致性）；
+    \item 可靠性预测网络与动态权重分配层；
+    \item 可靠性调制归一化（支持开关消融）；
+    \item SB3特征提取器封装与SAC端到端训练接口；
+    \item 退化注入环境（LiDAR/RGB/IMU）与\texttt{easy/medium/hard}难度分级；
+    \item 统一实验套件与汇总脚本（\texttt{run\_suite.py}、\texttt{summarize\_suite.py}）。
+\end{itemize}
+
+\subsection{训练性能优化}
+围绕“训练慢于预期”问题，已完成三类优化：
+\begin{enumerate}
+    \item 环境侧：LiDAR热点循环向量化、RGB网格缓存复用；
+    \item 网络侧：IMU分支改为共享时序CNN，降低更新开销；
+    \item 训练侧：默认共享特征提取器，非debug采用单次\texttt{learn()}。
+\end{enumerate}
+在本地CPU下，1000步训练可稳定在约32秒量级（共享特征提取器配置）。
+
+\subsection{测试状态}
+最近一次回归测试结果为\textbf{24项通过}，覆盖集成链路与编码器关键功能。
+
+\section{阶段量化结果}
+\subsection{当前可复现结果（degradation=0.5）}
+\begin{itemize}
+    \item 中等难度（single seed）下，各方法成功率接近100\%，区分度有限；
+    \item 困难难度（single seed）下，无可靠性基线碰撞率达到30\%，本文方法约5\%；
+    \item 困难难度（3 seeds, timesteps=1000）汇总如下。
+\end{itemize}
+
+\begin{table}[h!]
+    \centering
+    \caption{困难难度三随机种子汇总（degradation=0.5，timesteps=1000）}
+    \label{tab-progress-hard-ms}
+    \begin{tabular}{lcccc}
+        \toprule
+        方法 & 训练耗时(s) & 碰撞率 & 超时率 & 平均回报 \\
+        \midrule
+        ours\_dynamic & $39.98 \pm 3.03$ & $0.100 \pm 0.108$ & $0.900 \pm 0.108$ & $592.43 \pm 71.22$ \\
+        no\_reliability & $15.72 \pm 0.94$ & $0.233 \pm 0.062$ & $0.767 \pm 0.062$ & $554.50 \pm 71.32$ \\
+        fixed\_equal & $40.59 \pm 5.89$ & $0.117 \pm 0.047$ & $0.883 \pm 0.047$ & $620.37 \pm 12.93$ \\
+        no\_norm\_modulation & $41.61 \pm 5.32$ & $0.117 \pm 0.094$ & $0.883 \pm 0.094$ & $597.39 \pm 81.74$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\section{关键问题与成因分析}
+\subsection{关于“成功率为0”}
+在\texttt{hard + degradation=0.5 + timesteps=1000}配置下，成功率为0。当前判断如下：
+\begin{enumerate}
+    \item 任务难度与噪声强度高；
+    \item 训练步数不足，SAC尚未收敛；
+    \item 回合预算（\texttt{max\_steps}）与策略质量共同限制最终成功率。
+\end{enumerate}
+
+\subsection{验证结论}
+将\texttt{max\_steps}从200提升到400后，成功率仍为0，但回报与终止分布发生变化，说明问题不只在时间预算，核心瓶颈仍是训练不足与策略尚未稳定收敛。
+
+\section{后续训练计划}
+\subsection{训练排期与里程碑}
+\begin{enumerate}
+    \item \textbf{P0（2026-03-06至2026-03-12）}: 完成主线收敛实验，配置为\texttt{hard/medium + timesteps=100000 + seeds=42,43,44}，其中\texttt{hard}采用\texttt{max\_steps=400}；优先跑完\texttt{ours\_dynamic}、\texttt{no\_reliability}、\texttt{fixed\_equal}、\texttt{no\_norm\_modulation}。
+    \item \textbf{P1（2026-03-13至2026-03-20）}: 扩展外部代表性基线，新增\texttt{attn\_only}、\texttt{single\_modality}、\texttt{GMU}（或MoE-gating）等对比。
+    \item \textbf{P2（2026-03-21至2026-03-28）}: 完成显著性检验（bootstrap/t-test）、失败案例图示、可靠性分数相关性分析，并统一回填论文正文与附录。
+\end{enumerate}
+
+\subsection{预计使用的公开数据集（校准与泛化评测）}
+\begin{table}[h!]
+    \centering
+    \caption{后续计划接入的公开数据集}
+    \label{tab-progress-plan-datasets}
+    \footnotesize
+    \begin{tabular}{p{2.3cm}p{2.0cm}p{5.5cm}}
+        \toprule
+        数据集 & 模态 & 计划用途 \\
+        \midrule
+        TartanAir & RGB/深度/IMU/位姿 & 跨域视觉退化与IMU扰动评估，验证可靠性分数与退化强度的相关性 \\
+        EuRoC MAV & 双目/IMU & 校准IMU一致性指标，验证时序分支在真实轨迹上的稳定性 \\
+        KITTI Raw/Odometry & RGB/LiDAR/IMU & 校准LiDAR质量指标并进行跨场景鲁棒性评测 \\
+        NCLT & 多相机/3D LiDAR/IMU & 长序列与动态条件下的可靠性漂移测试 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+说明：公开数据集用于离线校准与泛化评测；强化学习主训练仍在当前仿真环境执行，以保证任务定义和奖励函数一致。
+
+\subsection{对比基线规划}
+\begin{table}[h!]
+    \centering
+    \caption{后续实验的基线对比矩阵}
+    \label{tab-progress-plan-baselines}
+    \footnotesize
+    \begin{tabular}{p{3.0cm}p{1.8cm}p{4.6cm}p{1.2cm}}
+        \toprule
+        基线 & 类型 & 说明 & 优先级 \\
+        \midrule
+        \texttt{no\_reliability} & 项目内 & 直接拼接，不使用可靠性信息 & P0 \\
+        \texttt{fixed\_equal} & 项目内 & 固定等权融合 & P0 \\
+        \texttt{no\_norm\_modulation} & 项目内消融 & 去除可靠性调制归一化 & P0 \\
+        \texttt{attn\_only} & 外部思路改造 & 保留注意力，移除显式可靠性输入 & P1 \\
+        \texttt{single\_modality} & 下界基线 & LiDAR-only / RGB-only / IMU-only & P1 \\
+        \texttt{GMU} & 经典门控融合 & Gated Multimodal Unit & P1 \\
+        \texttt{MoE-gating} & 经典门控融合 & Mixture-of-Experts 动态门控 & P2 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{训练规模与交付物}
+\begin{itemize}
+    \item 主实验最小矩阵：\texttt{4 variants $\times$ 2 difficulties $\times$ 3 seeds = 24 runs}；
+    \item 目标机器下单次100k训练预计约1.0--1.5小时，主矩阵预计24--36小时；
+    \item 交付物：主结果表（均值$\pm$方差）、显著性检验结果、失败案例与可解释性图。
+\end{itemize}
+
+\section{资源需求与协作请求}
+建议用于长训练的硬件最低配置：
+\begin{itemize}
+    \item GPU显存$\ge$12GB；
+    \item CPU 8核以上；
+    \item 磁盘$\ge$50GB（日志与模型文件）。
+    \item 支持连续运行48小时以上（减少实验中断）。
+\end{itemize}
+
+建议优先执行：
+\begin{itemize}
+    \item \texttt{hard, timesteps=100000, seeds=42,43,44, max\_steps=400}
+    \item \texttt{medium, timesteps=100000, seeds=42,43,44}
+\end{itemize}
+
+\section{阶段结论}
+项目已从“可运行原型”进入“可量化验证阶段”，工程闭环基本完成。当前主要短板是长时训练与统计显著性。下一阶段应集中资源完成100k级多种子实验，以形成可供论文主结论使用的稳定证据。

@@ -1,0 +1,125 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{最终阶段汇报（学生口吻）}
+\label{appendix-final-student-report}
+
+尊敬的导师您好。以下是我截至\textbf{2026年3月5日}的最终阶段汇报，我重点说明：我已经完成了什么、目前还存在什么问题、下一步怎么推进。
+
+\section{我已完成的工作}
+\subsection{方法实现}
+我已经把论文主线方法完整落地，包含：
+\begin{itemize}
+    \item 三模态可靠性估计（LiDAR/RGB/IMU）；
+    \item 可靠性预测网络；
+    \item 注意力动态权重分配；
+    \item 可靠性调制归一化（并支持开关消融）；
+    \item 与SB3（SAC + MultiInputPolicy）的端到端训练集成。
+\end{itemize}
+
+\subsection{实验链路}
+我已经完成实验基础设施：
+\begin{itemize}
+    \item 退化注入：LiDAR丢点与噪声、RGB模糊/噪声/遮挡、IMU噪声/漂移/通道丢失；
+    \item 难度分级：\texttt{easy/medium/hard}；
+    \item 统一对比脚本：\texttt{experiments/run\_suite.py}；
+    \item 统计汇总脚本：\texttt{experiments/summarize\_suite.py}。
+\end{itemize}
+
+\subsection{性能优化}
+针对“训练慢于预期”的问题，我完成了环境侧、网络侧和训练侧优化。当前在本地CPU下，1000步训练（GAP + reliability + share extractor）可以稳定在约32秒量级。
+
+\section{当前实验结果与理解}
+\subsection{中等难度}
+在\texttt{degradation=0.5}的中等难度下，各方法成功率均接近100\%，区分度不足，不适合作为最终主结果场景。
+
+\subsection{困难难度}
+在\texttt{hard + degradation=0.5 + timesteps=1000}下，三随机种子汇总显示：
+\begin{itemize}
+    \item \texttt{ours\_dynamic}：collision $=0.100\pm0.108$；
+    \item \texttt{no\_reliability}：collision $=0.233\pm0.062$。
+\end{itemize}
+我目前的理解是：在低训练步数阶段，可靠性感知分支已经对“碰撞抑制”有正向作用，但策略整体尚未收敛。
+
+\section{关于“成功率为0”的原因判断}
+该现象并非单一代码错误导致，而是以下因素叠加：
+\begin{enumerate}
+    \item 困难场景本身任务强度高；
+    \item 退化噪声进一步增加学习难度；
+    \item 1000步训练不足以让SAC策略稳定收敛。
+\end{enumerate}
+
+我已做验证：将\texttt{max\_steps}从200提高到400后，成功率仍为0，但终止分布发生变化。说明“时间预算不足”只是部分因素，核心仍是训练步数不足。
+
+\section{当前不足与风险}
+\begin{itemize}
+    \item 目前hard场景虽然已有多种子，但步数仍偏低，统计波动较大；
+    \item 归一化调制分支的独立贡献仍需更长训练验证；
+    \item 外部代表性基线对比尚未完全补齐。
+\end{itemize}
+
+\section{后续训练计划}
+\subsection{训练阶段与排期（拟执行）}
+\begin{enumerate}
+    \item \textbf{P0（2026-03-06至2026-03-12）}: 完成主线收敛验证。配置为\texttt{hard/medium + timesteps=100000 + seeds=42,43,44}，其中\texttt{hard}场景使用\texttt{max\_steps=400}。优先跑完\texttt{ours\_dynamic}、\texttt{no\_reliability}、\texttt{fixed\_equal}、\texttt{no\_norm\_modulation}四个版本。
+    \item \textbf{P1（2026-03-13至2026-03-20）}: 扩展外部代表性基线，新增\texttt{attn\_only}、\texttt{single\_modality}、\texttt{GMU}（或MoE-gating）对比。
+    \item \textbf{P2（2026-03-21至2026-03-28）}: 完成统计显著性检验（bootstrap/t-test）、失败案例图示与可靠性分数相关性分析，并统一回填论文正文与附录。
+\end{enumerate}
+
+\subsection{预计使用的公开数据集}
+\begin{table}[h!]
+    \centering
+    \caption{后续计划接入的公开数据集（用于校准与泛化评测）}
+    \label{tab-student-plan-datasets}
+    \footnotesize
+    \begin{tabular}{p{2.3cm}p{2.1cm}p{5.0cm}p{1.6cm}}
+        \toprule
+        数据集 & 模态 & 计划用途 & 状态 \\
+        \midrule
+        TartanAir & RGB/深度/IMU/位姿 & 跨域视觉退化与IMU扰动评估，验证可靠性分数随退化强度变化的相关性 & 计划接入 \\
+        EuRoC MAV & 双目/IMU & 校准IMU一致性指标，验证时序分支在真实轨迹上的稳定性 & 计划接入 \\
+        KITTI Raw/Odometry & RGB/LiDAR/IMU & 校准LiDAR质量指标，并做跨场景鲁棒性评估 & 计划接入 \\
+        NCLT & 多相机/3D LiDAR/IMU & 长序列、强动态条件下的可靠性漂移测试 & 计划接入 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+上述数据集主要用于“离线校准 + 跨域评测”；强化学习主训练仍以当前仿真环境为主，以保证任务定义与奖励函数一致。
+
+\subsection{对比基线清单}
+\begin{table}[h!]
+    \centering
+    \caption{后续实验的对比基线规划}
+    \label{tab-student-plan-baselines}
+    \footnotesize
+    \begin{tabular}{p{3.0cm}p{1.8cm}p{4.2cm}p{1.4cm}}
+        \toprule
+        基线 & 类型 & 说明 & 优先级 \\
+        \midrule
+        \texttt{no\_reliability} & 项目内 & 直接拼接，不使用可靠性 & P0 \\
+        \texttt{fixed\_equal} & 项目内 & 固定等权融合 & P0 \\
+        \texttt{no\_norm\_modulation} & 项目内消融 & 去掉可靠性调制归一化 & P0 \\
+        \texttt{attn\_only} & 外部思路改造 & 保留注意力，移除显式可靠性输入 & P1 \\
+        \texttt{single\_modality} & 下界基线 & LiDAR-only / RGB-only / IMU-only & P1 \\
+        \texttt{GMU} & 经典门控融合 & Gated Multimodal Unit & P1 \\
+        \texttt{MoE-gating} & 经典门控融合 & Mixture-of-Experts 动态门控 & P2 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{训练规模与预期产出}
+\begin{itemize}
+    \item 主实验最小矩阵：\texttt{4 variants $\times$ 2 difficulties $\times$ 3 seeds = 24 runs}；
+    \item 目标机器下单次100k训练预计约1.0--1.5小时，主矩阵预计24--36小时；
+    \item 最终输出：主结果表（均值$\pm$方差）、显著性检验结果、失败案例与可解释性图示。
+\end{itemize}
+
+\section{我希望申请的资源支持}
+为保证实验效率与论文进度，我建议使用以下配置执行长训练：
+\begin{itemize}
+    \item GPU显存$\ge$12GB；
+    \item CPU 8核以上；
+    \item 可用磁盘$\ge$50GB。
+    \item 支持连续运行48小时以上（避免长实验中断）。
+\end{itemize}
+
+\section{阶段总结}
+我认为项目已经从“可运行原型”进入“可量化验证”阶段。工程闭环基本完成，当前最关键的是尽快完成100k级别多种子训练，把趋势性结果提升为稳定、可答辩的实证结论。

@@ -1,0 +1,103 @@
+\begin{thebibliography}{15}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\url}[1]{#1}
+\expandafter\ifx\csname urlstyle\endcsname\relax\else
+  \urlstyle{same}\fi
+\expandafter\ifx\csname href\endcsname\relax
+  \DeclareUrlCommand\doi{\urlstyle{rm}}\else
+  \providecommand\doi[1]{\href{https://doi.org/#1}{\nolinkurl{#1}}}\fi
+
+\bibitem[Baltrusaitis et~al.(2017)Baltrusaitis, Ahuja, and Morency]{baltrusaitis2017multimodalmachinelearningsurvey}
+T. Baltrusaitis, C. Ahuja, L.-P. Morency.
+\newblock Multimodal machine learning: A survey and taxonomy\allowbreak[EB/OL].
+\newblock 2017.
+\newblock \url{https://arxiv.org/abs/1705.09406}.
+
+\bibitem[Zhang et~al.(2024)Zhang, Wei, Han, Fu, Peng, Deng, Hu, Xu, Wen, Hu, and Zhang]{zhang2024multimodalfusionlowqualitydata}
+Q. Zhang, Y. Wei, Z. Han, et~al.
+\newblock Multimodal fusion on low-quality data: A comprehensive survey\allowbreak[EB/OL].
+\newblock 2024.
+\newblock \url{https://arxiv.org/abs/2404.18947}.
+
+\bibitem[Gal et~al.(2016)Gal and Ghahramani]{gal2016dropoutbayesian}
+Y. Gal, Z. Ghahramani.
+\newblock Dropout as a bayesian approximation: Representing model uncertainty in deep learning\allowbreak[C/OL]//\allowbreak
+Proceedings of the 33rd International Conference on Machine Learning (ICML).
+\newblock 2016: 1050-1059.
+\newblock \url{http://proceedings.mlr.press/v48/gal16.html}.
+
+\bibitem[Kendall et~al.(2017)Kendall and Gal]{kendall2017uncertainties}
+A. Kendall, Y. Gal.
+\newblock What uncertainties do we need in bayesian deep learning for computer vision?\allowbreak[C/OL]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS): volume~30.
+\newblock 2017.
+\newblock \url{https://proceedings.neurips.cc/paper_files/paper/2017/file/2650d6089a6d640c5e85b2b88265dc2b-Paper.pdf}.
+
+\bibitem[Vaswani et~al.(2017)Vaswani, Shazeer, Parmar, Uszkoreit, Jones, Gomez, Kaiser, and Polosukhin]{vaswani2017attention}
+A. Vaswani, N. Shazeer, N. Parmar, et~al.
+\newblock Attention is all you need\allowbreak[C/OL]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS).
+\newblock 2017.
+\newblock \url{https://arxiv.org/abs/1706.03762}.
+
+\bibitem[Liu et~al.(2024)Liu, Tang, Amini, Yang, Mao, Rus, and Han]{liu2024bevfusionmultitaskmultisensorfusion}
+Z. Liu, H. Tang, A. Amini, et~al.
+\newblock Bevfusion: Multi-task multi-sensor fusion with unified bird's-eye view representation\allowbreak[EB/OL].
+\newblock 2024.
+\newblock \url{https://arxiv.org/abs/2205.13542}.
+
+\bibitem[Liao et~al.(2025)Liao, Lei, Zheng, Moon, Wang, Wang, Paudel, Van~Gool, and Hu]{liao2025benchmarkingmultimodalsemanticsegmentation}
+C. Liao, K. Lei, X. Zheng, et~al.
+\newblock Benchmarking multi-modal semantic segmentation under sensor failures: Missing and noisy modality robustness\allowbreak[EB/OL].
+\newblock 2025.
+\newblock \url{https://arxiv.org/abs/2503.18445}.
+
+\bibitem[Park et~al.(2025)Park, Kim, Kim, and Choi]{park2025resilientsensorfusionadverse}
+K. Park, Y. Kim, D. Kim, et~al.
+\newblock Resilient sensor fusion under adverse sensor failures via multi-modal expert fusion\allowbreak[EB/OL].
+\newblock 2025.
+\newblock \url{https://arxiv.org/abs/2503.19776}.
+
+\bibitem[Haarnoja et~al.(2018)Haarnoja, Zhou, Abbeel, and Levine]{haarnoja2018sac}
+T. Haarnoja, A. Zhou, P. Abbeel, et~al.
+\newblock Soft actor-critic algorithms and applications\allowbreak[J/OL].
+\newblock arXiv preprint arXiv:1812.05905, 2018.
+\newblock \url{https://arxiv.org/abs/1812.05905}.
+
+\bibitem[Raffin et~al.(2021)Raffin, Hill, Gleave, Kanervisto, Ernestus, and Dormann]{raffin2021sb3}
+A. Raffin, A. Hill, A. Gleave, et~al.
+\newblock Stable-baselines3: Reliable reinforcement learning implementations\allowbreak[EB/OL].
+\newblock 2021.
+\newblock \url{https://github.com/DLR-RM/stable-baselines3}.
+
+\bibitem[{Farama Foundation}(2023)]{gymnasium2023}
+{Farama Foundation}.
+\newblock Gymnasium: A standard api for reinforcement learning environments\allowbreak[EB/OL].
+\newblock 2023.
+\newblock \url{https://gymnasium.farama.org/}.
+
+\bibitem[Paszke et~al.(2019)Paszke, Gross, Massa, Lerer, Bradbury, Chanan, et~al.]{paszke2019pytorch}
+A. Paszke, S. Gross, F. Massa, et~al.
+\newblock Pytorch: An imperative style, high-performance deep learning library\allowbreak[C/OL]//\allowbreak
+Advances in Neural Information Processing Systems (NeurIPS).
+\newblock 2019.
+\newblock \url{https://pytorch.org/}.
+
+\bibitem[Khalil(2002)]{khalil2002nonlinear}
+H.~K. Khalil.
+\newblock Nonlinear systems\allowbreak[M].
+\newblock 3rd ed.
+\newblock [S.l.]: Prentice Hall, 2002.
+
+\bibitem[Zhou et~al.(1996)Zhou, Doyle, and Glover]{zhou1996hinf}
+K. Zhou, J.~C. Doyle, K. Glover.
+\newblock Robust and optimal control\allowbreak[M].
+\newblock [S.l.]: Prentice Hall, 1996.
+
+\bibitem[Cover et~al.(2006)Cover and Thomas]{cover2006information}
+T.~M. Cover, J.~A. Thomas.
+\newblock Elements of information theory\allowbreak[M].
+\newblock 2nd ed.
+\newblock [S.l.]: Wiley, 2006.
+
+\end{thebibliography}

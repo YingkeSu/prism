@@ -1,0 +1,27 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{相关工作与技术背景}
+
+\section{多模态融合与可靠性建模}
+多模态学习（Multimodal Learning）研究如何在统一模型中利用多源异构信息提升感知与决策能力。综述工作\cite{baltrusaitis2017multimodalmachinelearningsurvey}将多模态问题抽象为表示、对齐、融合与协同四类核心挑战。针对融合阶段，工程上常见策略包括：特征拼接、固定权重加权、门控网络（gating）以及注意力机制等。固定权重方法实现简单，但对模态质量的动态变化不敏感；注意力与门控机制能够在一定程度上自适应分配模态贡献，但若缺少显式质量或不确定性约束，则可能学习到难以解释且对分布漂移不稳健的权重。
+
+近年来，关于"低质量输入/模态缺失"下的多模态融合开始成为重要研究方向，相关综述\cite{zhang2024multimodalfusionlowqualitydata}系统讨论了噪声、缺失、遮挡与质量波动等问题设置与应对方法，为本文的"退化注入实验"提供了定义与对比框架。
+
+可靠性建模方面，已有方法常使用不确定性估计（如Monte Carlo Dropout与贝叶斯近似）或基于任务损失的隐式学习。Gal与Ghahramani\cite{gal2016dropoutbayesian}指出dropout可被解释为近似贝叶斯推断，从而在不改变网络结构的情况下估计模型不确定性；Kendall与Gal\cite{kendall2017uncertainties}进一步区分了观测噪声（aleatoric uncertainty）与模型不确定性（epistemic uncertainty），为基于不确定性的可靠性建模提供了经典框架。相比之下，本文更偏向从物理与信号层面构建显式质量指标，例如点云密度/均匀性与信噪比、图像锐度/对比度以及IMU一致性，从而为融合提供可解释的"质量先验"。
+
+\subsection{注意力机制与权重归一化}
+注意力机制通过可学习的相关性打分实现信息选择与加权聚合，多头注意力\cite{vaswani2017attention}能够并行建模不同的子空间关系，在多模态融合中常用于跨模态对齐或模态间交互。本文在融合模块中使用注意力得到模态权重，并通过softmax确保权重和为1，从而满足融合约束。
+
+在自动驾驶等领域，LiDAR-相机融合的代表工作BEVFusion\cite{liu2024bevfusionmultitaskmultisensorfusion}在统一BEV空间完成多传感器融合，体现了"结构化空间表征+融合"的一类主流范式。本文与此不同：本文聚焦轻量级可靠性估计与权重分配，将其集成为强化学习的特征提取器，以验证"可靠性感知融合"在决策闭环中的收益。
+
+\subsection{不确定性与质量度量}
+不确定性建模是可靠性估计的常见途径之一，例如通过贝叶斯近似或Monte Carlo Dropout估计预测分布的方差，并将其作为权重或门控信号。本文更偏向使用可解释的质量度量作为可靠性输入：该选择的优点是计算开销小、易调试、易进行故障分析；不足之处是质量度量与任务相关性的映射可能需要通过学习进一步校准。
+
+针对传感器失效场景，近期也出现了面向缺失/噪声模态的鲁棒性评测与方法设计，例如缺失与噪声模态下的多模态基准\cite{liao2025benchmarkingmultimodalsemanticsegmentation}以及面向失效的专家混合融合策略\cite{park2025resilientsensorfusionadverse}。这些工作为本文"NM/EMM/RMM"等退化场景的设定提供了可参考的实验范式。
+
+\section{强化学习在无人机导航中的应用}
+强化学习可以直接从交互数据中学习从观测到动作的映射，尤其在高维、多模态输入场景中具有优势。本文实现采用SAC算法，并基于Stable-Baselines3的MultiInputPolicy处理字典型观测输入。为保证可复现性与工程可用性，本文将融合模块集成为SB3特征提取器，使训练、日志与评估流程与主流RL工具链一致。
+
+本文实现所依赖的关键工具链包括：SAC算法\cite{haarnoja2018sac}、Stable-Baselines3\cite{raffin2021sb3}、Gymnasium环境接口\cite{gymnasium2023}以及PyTorch深度学习框架\cite{paszke2019pytorch}。
+
+\section{本文方法定位}
+本文方法的关键定位为：\textbf{显式可靠性估计+自适应融合+RL端到端集成}。与仅在融合层学习权重的做法不同，本文在权重分配之前引入可解释质量信号，并在融合过程中通过自适应归一化抑制不可靠模态带来的尺度扰动，从而提升鲁棒性。
