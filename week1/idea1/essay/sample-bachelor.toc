@@ -1,0 +1,106 @@
+\contentsline {chapter}{\numberline {1\hspace {.3em}}绪论}{1}{chapter.1}%
+\contentsline {section}{\numberline {1.1}研究背景与意义}{1}{section.1.1}%
+\contentsline {section}{\numberline {1.2}问题定义与研究内容}{1}{section.1.2}%
+\contentsline {subsection}{\numberline {1.2.1}问题定义}{1}{subsection.1.2.1}%
+\contentsline {subsection}{\numberline {1.2.2}研究内容}{1}{subsection.1.2.2}%
+\contentsline {section}{\numberline {1.3}主要工作与创新点}{2}{section.1.3}%
+\contentsline {section}{\numberline {1.4}技术路线（示意）}{2}{section.1.4}%
+\contentsline {section}{\numberline {1.5}论文结构}{2}{section.1.5}%
+\contentsline {chapter}{\numberline {2\hspace {.3em}}相关工作与技术背景}{3}{chapter.2}%
+\contentsline {section}{\numberline {2.1}多模态融合与可靠性建模}{3}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}注意力机制与权重归一化}{3}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}不确定性与质量度量}{4}{subsection.2.1.2}%
+\contentsline {section}{\numberline {2.2}强化学习在无人机导航中的应用}{4}{section.2.2}%
+\contentsline {section}{\numberline {2.3}本文方法定位}{4}{section.2.3}%
+\contentsline {chapter}{\numberline {3\hspace {.3em}}系统总体设计与方法概述}{5}{chapter.3}%
+\contentsline {section}{\numberline {3.1}系统输入与输出}{5}{section.3.1}%
+\contentsline {section}{\numberline {3.2}仿真环境与交互接口}{5}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}观测空间}{5}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}动作空间}{5}{subsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.2.3}奖励函数（与代码一致的形式化表达）}{6}{subsection.3.2.3}%
+\contentsline {section}{\numberline {3.3}可靠性感知融合流程}{6}{section.3.3}%
+\contentsline {section}{\numberline {3.4}符号与约定}{6}{section.3.4}%
+\contentsline {section}{\numberline {3.5}与强化学习训练的集成}{7}{section.3.5}%
+\contentsline {chapter}{\numberline {4\hspace {.3em}}核心方法、关键算法与理论推导}{8}{chapter.4}%
+\contentsline {section}{\numberline {4.1}范围声明与实现边界}{8}{section.4.1}%
+\contentsline {section}{\numberline {4.2}问题形式化与目标}{8}{section.4.2}%
+\contentsline {section}{\numberline {4.3}可靠性估计器设计与理论推导}{8}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}LiDAR信噪比估计（密度-均匀性融合）}{8}{subsection.4.3.1}%
+\contentsline {subsection}{\numberline {4.3.2}RGB图像质量评估（多维质量指标）}{9}{subsection.4.3.2}%
+\contentsline {subsection}{\numberline {4.3.3}IMU一致性检查（漂移与异常）}{10}{subsection.4.3.3}%
+\contentsline {section}{\numberline {4.4}可靠性预测网络（共享表征）}{10}{section.4.4}%
+\contentsline {section}{\numberline {4.5}动态权重分配的理论推导}{10}{section.4.5}%
+\contentsline {subsection}{\numberline {4.5.1}温度缩放的极限分析}{11}{subsection.4.5.1}%
+\contentsline {section}{\numberline {4.6}特征归一化与可靠性调制}{12}{section.4.6}%
+\contentsline {section}{\numberline {4.7}端到端融合与损失函数}{12}{section.4.7}%
+\contentsline {section}{\numberline {4.8}与强化学习的联合优化（SAC）}{12}{section.4.8}%
+\contentsline {section}{\numberline {4.9}理论分析补充：鲁棒性与信息论（基于假设的推导）}{13}{section.4.9}%
+\contentsline {subsection}{\numberline {4.9.1}最坏情况鲁棒性直观分析}{13}{subsection.4.9.1}%
+\contentsline {subsection}{\numberline {4.9.2}互信息视角的融合动机}{13}{subsection.4.9.2}%
+\contentsline {section}{\numberline {4.10}与SB3特征提取器的接口约束}{13}{section.4.10}%
+\contentsline {chapter}{\numberline {5\hspace {.3em}}实验设计与评估}{14}{chapter.5}%
+\contentsline {section}{\numberline {5.1}实验目标}{14}{section.5.1}%
+\contentsline {section}{\numberline {5.2}实验设置}{14}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}算法与实现}{14}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}环境与退化注入}{14}{subsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2.3}可复现实验脚本}{14}{subsection.5.2.3}%
+\contentsline {section}{\numberline {5.3}评价指标}{15}{section.5.3}%
+\contentsline {section}{\numberline {5.4}对比方法}{15}{section.5.4}%
+\contentsline {section}{\numberline {5.5}结果与分析（当前可复现结果）}{15}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}中等难度结果（single seed，degradation=0.5）}{15}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}困难难度结果（single seed，degradation=0.5）}{15}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}困难难度三随机种子汇总（timesteps=1000）}{16}{subsection.5.5.3}%
+\contentsline {subsection}{\numberline {5.5.4}结果讨论}{16}{subsection.5.5.4}%
+\contentsline {section}{\numberline {5.6}当前局限与后续迭代}{17}{section.5.6}%
+\contentsline {chapter}{\numberline {6\hspace {.3em}}工程实现与复现说明}{18}{chapter.6}%
+\contentsline {section}{\numberline {6.1}代码结构}{18}{section.6.1}%
+\contentsline {section}{\numberline {6.2}关键接口与张量形状}{18}{section.6.2}%
+\contentsline {section}{\numberline {6.3}模型规模与开销}{18}{section.6.3}%
+\contentsline {section}{\numberline {6.4}训练性能优化实现}{19}{section.6.4}%
+\contentsline {section}{\numberline {6.5}运行方式}{19}{section.6.5}%
+\contentsline {subsection}{\numberline {6.5.1}训练入口}{19}{subsection.6.5.1}%
+\contentsline {subsection}{\numberline {6.5.2}实验套件}{19}{subsection.6.5.2}%
+\contentsline {section}{\numberline {6.6}测试与复现状态}{19}{section.6.6}%
+\contentsline {section}{\numberline {6.7}未完成事项}{20}{section.6.7}%
+\contentsline {chapter}{总结}{21}{chapter*.5}%
+\contentsline {chapter}{致谢}{22}{chapter*.6}%
+\contentsline {chapter}{参考文献}{23}{section*.7}%
+\contentsline {chapter}{\numberline {附录 A\hspace {.3em}}常见问题}{25}{appendix.A}%
+\contentsline {chapter}{\numberline {附录 B\hspace {.3em}}联系我们}{26}{appendix.B}%
+\contentsline {chapter}{\numberline {附录 C\hspace {.3em}}项目进展报告（导师审阅）}{27}{appendix.C}%
+\contentsline {section}{\numberline {C.1}报告说明}{27}{section.C.1}%
+\contentsline {section}{\numberline {C.2}项目定位与目标}{27}{section.C.2}%
+\contentsline {section}{\numberline {C.3}当前完成情况}{27}{section.C.3}%
+\contentsline {subsection}{\numberline {C.3.1}方法与工程实现}{27}{subsection.C.3.1}%
+\contentsline {subsection}{\numberline {C.3.2}训练性能优化}{27}{subsection.C.3.2}%
+\contentsline {subsection}{\numberline {C.3.3}测试状态}{28}{subsection.C.3.3}%
+\contentsline {section}{\numberline {C.4}阶段量化结果}{28}{section.C.4}%
+\contentsline {subsection}{\numberline {C.4.1}当前可复现结果（degradation=0.5）}{28}{subsection.C.4.1}%
+\contentsline {section}{\numberline {C.5}关键问题与成因分析}{28}{section.C.5}%
+\contentsline {subsection}{\numberline {C.5.1}关于“成功率为0”}{28}{subsection.C.5.1}%
+\contentsline {subsection}{\numberline {C.5.2}验证结论}{29}{subsection.C.5.2}%
+\contentsline {section}{\numberline {C.6}后续训练计划}{29}{section.C.6}%
+\contentsline {subsection}{\numberline {C.6.1}训练排期与里程碑}{29}{subsection.C.6.1}%
+\contentsline {subsection}{\numberline {C.6.2}预计使用的公开数据集（校准与泛化评测）}{29}{subsection.C.6.2}%
+\contentsline {subsection}{\numberline {C.6.3}对比基线规划}{30}{subsection.C.6.3}%
+\contentsline {subsection}{\numberline {C.6.4}训练规模与交付物}{30}{subsection.C.6.4}%
+\contentsline {section}{\numberline {C.7}资源需求与协作请求}{30}{section.C.7}%
+\contentsline {section}{\numberline {C.8}阶段结论}{31}{section.C.8}%
+\contentsline {chapter}{\numberline {附录 D\hspace {.3em}}最终阶段汇报（学生口吻）}{32}{appendix.D}%
+\contentsline {section}{\numberline {D.1}我已完成的工作}{32}{section.D.1}%
+\contentsline {subsection}{\numberline {D.1.1}方法实现}{32}{subsection.D.1.1}%
+\contentsline {subsection}{\numberline {D.1.2}实验链路}{32}{subsection.D.1.2}%
+\contentsline {subsection}{\numberline {D.1.3}性能优化}{32}{subsection.D.1.3}%
+\contentsline {section}{\numberline {D.2}当前实验结果与理解}{33}{section.D.2}%
+\contentsline {subsection}{\numberline {D.2.1}中等难度}{33}{subsection.D.2.1}%
+\contentsline {subsection}{\numberline {D.2.2}困难难度}{33}{subsection.D.2.2}%
+\contentsline {section}{\numberline {D.3}关于“成功率为0”的原因判断}{33}{section.D.3}%
+\contentsline {section}{\numberline {D.4}当前不足与风险}{33}{section.D.4}%
+\contentsline {section}{\numberline {D.5}后续训练计划}{33}{section.D.5}%
+\contentsline {subsection}{\numberline {D.5.1}训练阶段与排期（拟执行）}{33}{subsection.D.5.1}%
+\contentsline {subsection}{\numberline {D.5.2}预计使用的公开数据集}{34}{subsection.D.5.2}%
+\contentsline {subsection}{\numberline {D.5.3}对比基线清单}{34}{subsection.D.5.3}%
+\contentsline {subsection}{\numberline {D.5.4}训练规模与预期产出}{34}{subsection.D.5.4}%
+\contentsline {section}{\numberline {D.6}我希望申请的资源支持}{34}{section.D.6}%
+\contentsline {section}{\numberline {D.7}阶段总结}{35}{section.D.7}%
+\contentsfinish 

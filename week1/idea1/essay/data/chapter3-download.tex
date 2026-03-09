@@ -1,0 +1,65 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{系统总体设计与方法概述}
+
+\section{系统输入与输出}
+系统以三模态观测作为输入：
+\begin{itemize}
+    \item \textbf{LiDAR}：点云$\in \mathbb{R}^{N\times 3}$（默认$N=1000$）。
+    \item \textbf{RGB}：图像$\in \mathbb{R}^{H\times W\times 3}$（默认$H=W=128$）。
+    \item \textbf{IMU}：惯性数据$\in \mathbb{R}^{6}$（加速度计与陀螺仪）。
+\end{itemize}
+系统输出为用于RL策略网络的融合特征向量（默认$256$维），并可选返回中间信息（可靠性分数、权重分配、归一化后的模态特征），用于可视化与调试。
+
+\section{仿真环境与交互接口}
+本文实现使用Gymnasium接口构建UAV多模态仿真环境，其交互形式为标准的Markov决策过程（MDP）：在时刻$t$，环境返回观测$o_t$，策略输出动作$a_t$，环境产生奖励$r_t$并转移到下一个状态。
+
+\subsection{观测空间}
+环境观测为字典形式：
+\begin{equation}
+o_t = \{o_t^{L}, o_t^{R}, o_t^{I}\}
+\end{equation}
+其中：$o_t^{L}$为点云，$o_t^{R}$为图像，$o_t^{I}$为IMU数据。该设计能够直接对接Stable-Baselines3的\texttt{MultiInputPolicy}。
+
+\subsection{动作空间}
+动作空间为四维连续向量：
+\begin{equation}
+a_t = [v_x, v_y, v_z, \omega]^\top, \quad a_t \in [-1, 1]^4
+\end{equation}
+分别对应线速度与角速度控制分量。
+
+\subsection{奖励函数（与代码一致的形式化表达）}
+根据环境实现，奖励主要由到目标距离、碰撞惩罚、速度惩罚和到达目标奖励构成。设无人机位置为$p_t$，目标位置为$p_g$，则距离项为：
+\begin{equation}
+r_{\text{dist}}(t) = -\lVert p_t - p_g \rVert_2
+\end{equation}
+速度惩罚项为：
+\begin{equation}
+r_{\text{speed}}(t) = -0.01\,\lVert v_t \rVert_2
+\end{equation}
+若发生碰撞则施加固定惩罚$r_{\text{coll}}=-100$；若到达目标半径内则施加奖励$r_{\text{goal}}=100$。因此总体奖励：
+\begin{equation}
+r_t = r_{\text{dist}}(t) + r_{\text{speed}}(t) + r_{\text{coll}}(t) + r_{\text{goal}}(t)
+\end{equation}
+
+\textbf{说明}：上述形式与当前仓库环境代码一致，但该环境仍为简化仿真版本，未引入真实传感器噪声模型与复杂动力学。
+
+\section{可靠性感知融合流程}
+Idea1的融合流程可概括为以下步骤：
+\begin{enumerate}
+    \item \textbf{模态质量估计}：为每个模态提取质量特征并输出质量相关分数。
+    \item \textbf{可靠性预测}：融合质量特征得到各模态可靠性分数$r_{lidar}, r_{rgb}, r_{imu}\in[0,1]$以及共享特征表征$\mathbf{f}$。
+    \item \textbf{动态权重分配}：对$\mathbf{f}$进行模态分支映射，利用多头注意力生成模态权重$w_{lidar}, w_{rgb}, w_{imu}$，并约束$\sum w=1$。
+    \item \textbf{自适应归一化与融合}：对各模态特征进行归一化与加权，拼接后送入轻量MLP输出融合表示。
+\end{enumerate}
+
+\section{符号与约定}
+为便于后续理论推导，本文采用如下符号约定：
+\begin{itemize}
+    \item 模态集合$\mathcal{M}=\{L,R,I\}$分别表示LiDAR、RGB与IMU；
+    \item $r_t^m \in [0,1]$表示模态$m$在时刻$t$的可靠性分数；
+    \item $w_t^m \ge 0$表示融合权重，且$\sum_{m\in\mathcal{M}} w_t^m = 1$；
+    \item $f_t^m \in \mathbb{R}^{d}$表示模态$m$的特征表示（默认$d=256$）。
+\end{itemize}
+
+\section{与强化学习训练的集成}
+本文在工程上将融合模块封装为Stable-Baselines3的特征提取器（BaseFeaturesExtractor），使其可直接用于SAC的MultiInputPolicy。训练入口脚本提供可靠性模式与基线模式（禁用可靠性、直接拼接）切换，并支持TensorBoard日志记录。

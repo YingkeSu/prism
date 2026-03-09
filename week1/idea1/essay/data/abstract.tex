@@ -1,0 +1,14 @@
+% !Mode:: "TeX:UTF-8"
+
+% 中英文摘要
+\begin{cabstract}
+本文面向复杂环境下无人机（UAV）自主导航任务，研究多模态传感器（LiDAR、RGB、IMU）在质量退化与噪声扰动场景中的鲁棒融合问题。针对传统固定权重或直接拼接式融合难以适应模态可靠性动态变化的不足，本文提出一种多维度可靠性感知的自适应融合框架（Idea1）：首先从点云信噪比、图像清晰度/对比度等质量指标以及IMU时序一致性等角度对各模态进行显式可靠性估计；其次利用可靠性预测网络聚合模态质量特征，并通过基于注意力机制的动态权重分配与自适应归一化实现特征级融合；最后将融合模块封装为Stable-Baselines3兼容的特征提取器，支持SAC等强化学习算法端到端训练。
+
+目前，本项目已完成核心网络、退化注入仿真环境、难度分级评测设置与自动化实验脚本的实现，并通过集成测试验证了SB3流水线可运行。在本地CPU上，1000时间步训练已可稳定完成（约32秒）。初步实验表明：在中等难度场景（degradation=0.5）下，可靠性感知融合模型相较无可靠性基线获得更高平均回报；在困难场景下，无可靠性基线碰撞率显著上升（30\%），显示可靠性感知机制对鲁棒性具有积极作用。受算力与周期限制，跨多随机种子的大规模长时训练（10k\textasciitilde100k步）仍在持续迭代中。
+\end{cabstract}
+
+\begin{eabstract}
+This thesis studies robust multi-modal sensor fusion for UAV navigation under sensor quality degradation and noise, with three modalities (LiDAR, RGB, and IMU). We propose Idea1, a reliability-aware adaptive fusion framework: (1) explicitly estimate modality reliability from LiDAR SNR, image quality metrics, and IMU temporal consistency; (2) aggregate quality features with a lightweight reliability predictor, then perform attention-based dynamic weighting and reliability-guided adaptive normalization for feature fusion; (3) integrate the fusion module into a Stable-Baselines3 compatible feature extractor to enable end-to-end reinforcement learning (e.g., SAC).
+
+The repository now includes the full core pipeline, degradation injection, difficulty presets, and reproducible experiment scripts, and it passes integration tests. On local CPU, 1000-step training is stable (\(\sim 32\) seconds). Preliminary results show that reliability-aware fusion improves average return over the no-reliability baseline in moderate degradation settings, while in hard settings the no-reliability baseline shows a much higher collision rate (30\%). Large-scale multi-seed long-horizon training (10k--100k steps) remains ongoing due compute limits.
+\end{eabstract}

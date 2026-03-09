@@ -1,0 +1,78 @@
+% !Mode:: "TeX:UTF-8"
+\chapter{工程实现与复现说明}
+
+\section{代码结构}
+项目核心代码位于仓库根目录，关键路径如下：
+\begin{itemize}
+    \item \texttt{envs/uav\_multimodal\_env.py}：多模态环境、退化注入、难度分级
+    \item \texttt{networks/reliability\_estimators/}：LiDAR/RGB/IMU可靠性估计器
+    \item \texttt{networks/reliability\_predictor.py}：可靠性预测网络
+    \item \texttt{networks/dynamic\_weighting\_layer.py}：动态权重分配
+    \item \texttt{networks/adaptive\_normalization.py}：可靠性调制归一化
+    \item \texttt{networks/reliability\_aware\_fusion.py}：端到端融合模块
+    \item \texttt{networks/uav\_multimodal\_extractor.py}：SB3特征提取器
+    \item \texttt{train.py}：统一训练入口
+    \item \texttt{utils/experiment\_pipeline.py}：训练/评估通用流水线
+    \item \texttt{experiments/run\_suite.py}：对比与消融套件
+\end{itemize}
+
+\section{关键接口与张量形状}
+\begin{itemize}
+    \item LiDAR输入：$(B,1000,3)$
+    \item RGB输入：环境输出$(B,128,128,3)$（NHWC），提取器内转换为$(B,3,128,128)$（NCHW）
+    \item IMU输入：环境输出$(B,6)$，提取器内扩展为$(B,16,6)$用于时序一致性建模
+    \item 特征提取器输出：$(B,256)$
+\end{itemize}
+
+\section{模型规模与开销}
+基于当前实现统计，核心参数规模如下：
+\begin{itemize}
+    \item \textbf{ReliabilityPredictor}：151,769 参数（约151.8K）
+    \item \textbf{ReliabilityAwareFusionModule}：719,398 参数（约719.4K）
+    \item \textbf{SAC策略总参数（共享特征提取器）}：2,350,500（约2.35M）
+    \item \textbf{SAC策略总参数（非共享）}：3,193,200（约3.19M）
+\end{itemize}
+
+\section{训练性能优化实现}
+针对早期“训练时间明显长于预期”的问题，工程上完成了以下优化：
+\begin{enumerate}
+    \item \textbf{环境侧优化}：LiDAR障碍重采样由逐点循环改为向量化；RGB渲染网格改为缓存复用。
+    \item \textbf{网络侧优化}：IMU一致性分支改为共享时序CNN编码，移除重复分支与高开销时序路径。
+    \item \textbf{训练侧优化}：默认开启\texttt{share\_features\_extractor=True}，非debug下使用单次\texttt{learn()}减少循环调度开销。
+\end{enumerate}
+
+优化后在本地CPU上可稳定完成1000步训练，典型耗时约32秒（\texttt{GAP}编码器、可靠性模式、共享特征提取器）。
+
+\section{运行方式}
+\subsection{训练入口}
+\texttt{train.py}当前支持以下关键参数：
+\begin{itemize}
+    \item 训练步数：\texttt{--timesteps}
+    \item 可靠性开关：\texttt{--no-reliability}
+    \item 归一化调制开关：\texttt{--no-reliability-modulation}
+    \item 退化强度：\texttt{--degradation-level}
+    \item 难度分级：\texttt{--difficulty easy|medium|hard}
+    \item 共享提取器开关：\texttt{--no-share-features-extractor}
+    \item IMU历史长度：\texttt{--imu-history-len}
+\end{itemize}
+
+\subsection{实验套件}
+\texttt{experiments/run\_suite.py}可一键执行“本文方法 + 基线 + 消融”并输出：
+\begin{itemize}
+    \item \texttt{suite\_results.json}：完整结构化结果
+    \item \texttt{suite\_summary.csv}：可直接制表与画图的扁平结果
+\end{itemize}
+
+\section{测试与复现状态}
+\begin{itemize}
+    \item 集成与编码器测试通过（24项）；
+    \item 训练与评估脚本可在本地CPU复现并输出结构化结果；
+    \item 退化注入与难度分级已并入统一环境接口。
+\end{itemize}
+
+\section{未完成事项}
+\begin{itemize}
+    \item 10k\textasciitilde100k步长时训练的系统统计仍在进行中；
+    \item 多随机种子（$\ge3$）的均值/方差表尚待补齐；
+    \item 面向真实传感器数据与真实机平台的迁移验证尚未开展。
+\end{itemize}
